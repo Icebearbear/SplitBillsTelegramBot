@@ -1,7 +1,10 @@
 import TelegramBotClient from "node-telegram-bot-api";
 import StateMachine from "javascript-state-machine";
+import * as dotenv from "dotenv";
 
-const token = "5746882734:AAFVYSvXyCzITXnwRlvceQco0jgTVUrflgY";
+dotenv.config();
+
+const token = process.env.TELEGRAM_TOKEN;
 
 function createFsm() {
   return StateMachine({
