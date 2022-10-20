@@ -1,7 +1,13 @@
 import TelegramBotClient from "node-telegram-bot-api";
 import StateMachine from "javascript-state-machine";
 import * as dotenv from "dotenv";
-
+import axios from "axios";
+import ocrCreate from "../ocr.js";
+import { getEventFromStateAndMessage, makeTransition } from "./events.js";
+import transitions from "./transitions.js";
+import methods from "./methods.js";
+import Context from "./model/Context.js";
+import callOCR from "../ocr.js";
 dotenv.config();
 
 const token = process.env.TELEGRAM_TOKEN;
@@ -9,362 +15,127 @@ const token = process.env.TELEGRAM_TOKEN;
 function createFsm() {
   return StateMachine({
     init: "waitingStart",
-    transitions: [
-      { name: "gotStart", from: "waitingStart", to: "waitingStart" },
-
-      //// two options from /start
-      { name: "gotStartToHistory", from: "waitingStart", to: "waitingHistory" },
-      { name: "gotStartToNewBill", from: "waitingStart", to: "waitingNewBill" },
-
-      //// two options from /newbill
-      {
-        name: "gotNewBillToAddReceipt",
-        from: "waitingNewBill",
-        to: "waitingAddReceipt",
-      },
-      {
-        name: "gotNewBillToInputAmountCmd",
-        from: "waitingNewBill",
-        to: "waitingInputAmountCmd",
-      },
-
-      /* branch from /newbill */
-
-      //// Add receipt ////
-      { name: "gotReceipt", from: "waitingAddReceipt", to: "waitingTakePic" },
-      { name: "gotPicture", from: "waitingTakePic", to: "printExtractedPrice" },
-      {
-        name: "gotPrintExtractedPriceToConfirmPrice",
-        form: "printExtractedPrice",
-        to: "waitingConfirmPrice",
-      },
-      {
-        name: "gotConfirmPriceToAddReceipt",
-        from: "waitingConfirmPrice",
-        to: "waitingAddReceipt",
-      },
-      {
-        name: "gotConfirmPriceToCalculatePrice",
-        from: "waitingConfirmPrice",
-        to: "waitingCalculateBills",
-      },
-      {
-        name: "gotCalculateBills",
-        from: "waitingCalculateBills",
-        to: "printSplitSummary",
-      },
-      {
-        name: "gotPrintSplitSummaryToShowWebapp",
-        from: "printSplitSummary",
-        to: "waitingShowWebapp",
-      },
-      {
-        name: "gotPrintSplitSummaryToAddReceipt",
-        from: "printSplitSummary",
-        to: "waitingAddReceipt",
-      },
-      ///////// retry other price
-      {
-        name: "gotPrintExtractedPriceToTryOtherPrice",
-        from: "printExtractedPrice",
-        to: "waitingTryOtherPrice",
-      },
-      {
-        name: "gotTryOtherPrice",
-        from: "waitngTryOtherPrice",
-        to: "printExtractedPrice",
-      },
-      ///////// todo wait for paid button func
-
-      //// Input amount manually ////
-      {
-        name: "gotInputAmountCmd",
-        from: "waitingInputAmountCmd",
-        to: "waitingAmount",
-      },
-      { name: "gotAmount", from: "waitingAmount", to: "printInputPrice" },
-      {
-        name: "gotPrintInputPrice",
-        from: "printInputPrice",
-        to: "waitingConfirmPrice",
-      },
-      {
-        name: "gotConfirmPriceToInputAmount",
-        from: "waitingConfirmPrice",
-        to: "waitingAmount",
-      },
-      {
-        name: "gotConfirmAmount",
-        from: "waitingConfirmPrice",
-        to: "waitingAddAnotherAmount",
-      }, //saved amount to db
-      {
-        name: "gotDoneInputAmount",
-        from: "waitingAddAnotherAmount",
-        to: "waitingCalculateBills",
-      },
-      {
-        name: "gotAddAnotherAmount",
-        from: "waitingAddAnotherAmount",
-        to: "waitingAmount",
-      },
-
-      /* branch from /history */
-      { name: "gotHistory", from: "waitingHistory", to: "printHistory" },
-      {
-        name: "gotPrintHistoryToStart",
-        from: "printHistory",
-        to: "waitingStart",
-      },
-      {
-        name: "gotPrintHistoryToShowWebApp",
-        from: "printHistory",
-        to: "waitingShowWebapp",
-      },
-
-      // todo
-      { name: "gotStop", from: "waitingStart", to: "stopped" },
-    ],
-    methods: {
-      onGotStart: function () {
-        console.log("enter ongotstart");
-        const opts = {
-          reply_markup: {
-            keyboard: [["New bill"], ["Bill history"]],
-          },
-        };
-        const text =
-          "Let's begin! Select a function \n new bill to start splitting bill \n history to show current split bill history";
-        return [text, opts];
-      },
-      onGotStartToNewBill: function () {
-        console.log("enter ongotstartToNewBill");
-        const opts = {
-          reply_markup: {
-            remove_keyboard: true,
-          },
-        };
-        const text = "new bil event";
-        return [text, opts];
-      },
-      onGotStartToHistory: function () {
-        console.log("enter ongotstartToHistory");
-        const opts = {
-          reply_markup: {
-            remove_keyboard: true,
-          },
-        };
-        const text = "bill history";
-        return [text, opts];
-      },
-      onGotNewBillToAddReceipt: function () {
-        return;
-      },
-      onGotNewBillToInputAmountCmd: function () {
-        return;
-      },
-      onGotReceipt: function () {
-        return;
-      },
-      onGotPicture: function () {
-        return;
-      },
-      onGotPrintExtractedPriceToConfirmPrice: function () {
-        return;
-      },
-      onGotConfirmPriceToAddReceipt: function () {
-        return;
-      },
-      onGotConfirmPriceToCalculatePrice: function () {
-        return;
-      },
-      onGotCalculateBills: function () {
-        return;
-      },
-      onGotPrintSplitSummaryToShowWebapp: function () {
-        return;
-      },
-      onGotPrintSplitSummaryToAddReceipt: function () {
-        return;
-      },
-      onGotPrintExtractedPriceToTryOtherPrice: function () {
-        return;
-      },
-      onGotTryOtherPrice: function () {
-        return;
-      },
-      onGotInputAmountCmd: function () {
-        return;
-      },
-      onGotAmount: function () {
-        return;
-      },
-      onGotPrintInputPrice: function () {
-        return;
-      },
-      onGotConfirmPriceToInputAmount: function () {
-        return;
-      },
-      onGotConfirmAmount: function () {
-        return;
-      },
-      onGotDoneInputAmount: function () {
-        return;
-      },
-      onGotAddAnotherAmount: function () {
-        return;
-      },
-      onGotHistory: function () {
-        return;
-      },
-      onGotPrintHistoryToStart: function () {
-        return;
-      },
-      onGotPrintHistoryToShowWebApp: function () {
-        return;
-      },
-      onGotStop: function () {
-        return;
-      },
-    },
+    transitions: transitions,
+    methods: methods,
   });
 }
 
-function getEventFromStateAndMessage(state, text) {
-  // console.log("getEvent", state, text);
-  switch (state) {
-    case "waitingStart":
-      if (text === "New bill") {
-        return "gotStartToNewBill";
-      }
-      if (text === "Bill history") {
-        return "gotStartToHistory";
-      } else {
-        return text === "/start" && "gotStart";
-      }
-    case "waitingNewBill":
-      return text === "Add receipt"
-        ? "gotNewBillToAddReceipt"
-        : "gotNewBillToInputAmountCmd";
-    case "waitingTakePic":
-      return "gotPicture";
-    case "printExtractedPrice":
-      return text === "Confirm"
-        ? "gotPrintExtractedPriceToConfirmPrice"
-        : "gotConfirmPriceToCalculatePrice";
-    case "waitingConfirmPrice":
-      return text === "Calculate bills"
-        ? "gotConfirmPriceToCalculatePrice"
-        : "gotConfirmPriceToAddReceipt";
-    case "waitingCalculateBills":
-      return "gotCalculateBills";
-    case "printSplitSummary":
-      return text === "Show on Web App"
-        ? "gotPrintSplitSummaryToShowWebapp"
-        : "gotPrintSplitSummaryToAddReceipt";
-    case "waitingTryOtherPrice":
-      return "gotTryOtherPrice";
-    case "waitingInputAmountCmd":
-      return "gotInputAmountCmd";
-    case "waitingAmount":
-      return "gotAmount";
-    case "printInputPrice":
-      return "gotPrintInputPrice";
-    case "waitingConfirmPrice":
-      return text === "Add another amount"
-        ? "waitingAddAnotherAmount"
-        : "gotConfirmPriceToInputAmount";
-    case "waitingAddAnotherAmount":
-      return text === "Done" ? "gotDoneInputAmount" : "gotAddAnotherAmount";
-    case "waitingStop":
-      return "gotStop";
-    // case "waitingNewbill":
+async function uploadToOCR(message) {
+  console.log("entered if else for gotNewBillToAddReceipt");
+  const imageId = message.photo[0].file_id;
+  var imageUrl;
+  var extractedPrice = 100;
+  await axios
+    .get(`https://api.telegram.org/bot${token}/getFile?file_id=${imageId}`)
+    .then(async (res) => {
+      console.log(res.data);
+      const filePath = res.data.result.file_path;
+      console.log(filePath);
+      // image url in Telegram server
+      imageUrl = `https://api.telegram.org/file/bot${token}/${filePath}`;
+      // pass to a function of OCR and get the extracted price
+      //for now hardcode a pic first
+
+      extractedPrice = await callOCR(imageUrl); // pass in a base64, url
+      console.log("end axios :" + extractedPrice);
+    })
+    .then(() => {
+      return extractedPrice;
+    })
+    .catch((e) => {
+      console.log("ERROR IN OCR : " + e);
+    });
+  console.log("return price", extractedPrice);
+  return extractedPrice;
+}
+
+// for state that doesnt require inputs to transition
+function jumpToNextState(th, stateBefore, message, fsm) {
+  const statesList = [
+    "waitingCalculateBills",
+    "waitingShowWebApp",
+    "onGotCalculateBillsFrInputAmount",
+  ];
+  console.log(
+    "JUMP STATE ,",
+    stateBefore,
+    statesList.indexOf(stateBefore) != -1
+  );
+  // if (stateBefore === "waitingShowWebApp") {
+  //   message.text = "";
+  // }
+  if (statesList.indexOf(stateBefore) != -1) {
+    th.respondTo(message, fsm);
   }
 }
 
-function makeTransition(fsm, transition) {
-  switch (transition) {
-    case "gotStart":
-      return fsm.gotStart();
-    case "gotStartToNewBill":
-      return fsm.gotStartToNewBill();
-    case "gotStartToHistory":
-      return fsm.gotStartToHistory();
-
-    case "gotNewBillToAddReceipt":
-      return fsm.onGotNewBillToAddReceipt();
-    case "gotNewBillToInputAmountCmd":
-      return fsm.onGotNewBillToInputAmountCmd();
-    case "gotReceipt":
-      return fsm.onGotReceipt();
-    case "gotPicture":
-      return fsm.onGotPicture();
-    case "gotPrintExtractedPriceToConfirmPrice":
-      return fsm.onGotPrintExtractedPriceToConfirmPrice();
-    case "gotConfirmPriceToAddReceipt":
-      return fsm.onGotConfirmPriceToAddReceipt();
-    case "gotConfirmPriceToCalculatePrice":
-      return fsm.onGotConfirmPriceToCalculatePrice();
-    case "gotCalculateBills":
-      return fsm.onGotCalculateBills();
-    case "gotPrintSplitSummaryToShowWebapp":
-      return fsm.onGotPrintSplitSummaryToShowWebapp();
-    case "gotPrintSplitSummaryToAddReceipt":
-      return fsm.onGotPrintSplitSummaryToAddReceipt();
-    case "gotPrintExtractedPriceToTryOtherPrice":
-      return fsm.onGotPrintExtractedPriceToTryOtherPrice();
-    case "gotTryOtherPrice":
-      return fsm.onGotTryOtherPrice();
-    case "gotInputAmountCmd":
-      return fsm.onGotInputAmountCmd();
-    case "gotAmount":
-      return fsm.onGotAmount();
-    case "gotPrintInputPrice":
-      return fsm.onGotPrintInputPrice();
-    case "gotConfirmPriceToInputAmount":
-      return fsm.onGotConfirmPriceToInputAmount();
-    case "gotConfirmAmount":
-      return fsm.onGotConfirmAmount();
-    case "gotDoneInputAmount":
-      return fsm.onGotDoneInputAmount();
-    case "gotAddAnotherAmount":
-      return fsm.onGotAddAnotherAmount();
-    case "gotHistory":
-      return fsm.onGotHistory();
-    case "gotPrintHistoryToStart":
-      return fsm.onGotPrintHistoryToStart();
-    case "gotPrintHistoryToShowWebApp":
-      return fsm.onGotPrintHistoryToShowWebApp();
-
-    case "gotStop":
-      return fsm.gotStop();
+async function stateFunctions(th, stateBefore, message, context) {
+  if (stateBefore === "waitingAddReceipt" && message.photo) {
+    console.log("before ocr");
+    // th.setTotalBill(await uploadToOCR(message));
+    th.setTotalBill(2000);
+    context.changeText(th.getTotalBill());
+  }
+  if (stateBefore === "waitingInputAmountCmd") {
+    console.log("enter change input amount message");
+    context.changeText(message.text);
+  }
+  if (stateBefore === "waitingCalculateBills") {
+    console.log("enter calculate split bills");
+    // let noMembers = await self.getChatMemberCount(
+    //   message.chat.id,
+    //   message.from.id
+    // );
+    let noMembers = 2;
+    console.log("nO OF MEMBERS :" + noMembers);
+    th.setMembersCount(noMembers);
+    // const summary = await calculateSplitbills(
+    //   this.getTotalBill(),
+    //   this.getMembersCount()
+    // );
+    const summary = "THESE ARE MOCK SUMMARY";
+    console.log("SUMMARY BILLS :" + summary);
+    context.changeText(summary);
   }
 }
 
-function getText(data) {
-  return data[0];
-}
-function getContent(data) {
-  return data[1];
-}
+function calculateSplitbills() {}
 
 export default class Bot {
   constructor(token) {
     this.client = new TelegramBotClient(token, { polling: true });
+    this.membersCount = 0;
+    this.totalBill = 0;
+  }
+
+  getMembersCount() {
+    return this.getMembersCount;
+  }
+  setMembersCount(inp) {
+    this.membersCount = inp;
+  }
+  getTotalBill() {
+    return this.totalBill;
+  }
+  setTotalBill(bill) {
+    this.totalBill = bill;
   }
 
   start() {
+    let fsm = createFsm();
     this.client.on("message", (message) => {
       if (!message.reply_to_message) {
-        this.respondTo(message);
+        this.respondTo(message, fsm);
       }
     });
   }
 
-  async respondTo(message) {
-    let fsm = createFsm();
+  async respondTo(message, fsm) {
     let prevReply = message;
     let returnedVal;
+    let stateBefore = fsm.state;
+
+    console.log("enter respondTo with message : ", message);
 
     while (!fsm.is("stop")) {
       console.log("current state : " + fsm.state);
@@ -383,19 +154,29 @@ export default class Bot {
         );
         break;
       }
-
       // do transition and get the contents to be sent as message
       returnedVal = makeTransition(fsm, event);
-      console.log("returned values from transition");
+      console.log("returned values from transition : ", returnedVal);
 
-      self.on("polling_error", console.log);
+      // class to keep the values
+      const context = new Context(returnedVal);
+
+      // additional functions on certain states
+      await stateFunctions(this, stateBefore, message, context);
+
+      console.log("next state : " + fsm.state);
+      // self.on("polling_error", console.log);
 
       // send message according to the event's content and text
       let sentMessage = await self.sendMessage(
         message.chat.id,
-        getText(returnedVal),
-        getContent(returnedVal)
+        context.getText(),
+        context.getContent()
       );
+
+      await jumpToNextState(this, fsm.state, message, fsm);
+
+      console.log("done");
 
       // resolve the message sent earlier by replying to it and passing resolve to reply callback func
       prevReply = await new Promise((resolve) =>
