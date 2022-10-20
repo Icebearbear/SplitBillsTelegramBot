@@ -1,11 +1,13 @@
-const fs = require("fs");
-const axios = require("axios");
-const FormData = require("form-data");
+import fs from "fs";
+import axios from "axios";
+import FormData from "form-data";
 
-async function ocrCreate(input) {
+export async function ocrCreate(imageUrl) {
   try {
     const formData = new FormData();
-    formData.append("file", fs.createReadStream(input));
+    // formData.append("file", fs.createReadStream(input));
+    formData.append("url", imageUrl);
+    formData.append("filetype", "jpg");
     formData.append("language", "eng");
     formData.append("detectOrientation", "false");
     formData.append("isCreateSearchablePdf", "false");
@@ -30,7 +32,10 @@ async function ocrCreate(input) {
   }
 }
 
-getTotal = (data) => {
+function getTotal(data) {
+  if (data["ParsedResults"] == "") {
+    return 0;
+  }
   let total = 0;
   console.log(data);
   const words = data["ParsedResults"][0]["ParsedText"].split("\t\r\n");
@@ -47,12 +52,17 @@ getTotal = (data) => {
     });
   });
   return total;
-};
-
-async function main() {
-  const data = await ocrCreate("receipt.jpg");
-  const totalPrice = getTotal(data);
-  console.log("Total price is : " + totalPrice);
 }
 
-main();
+export default async function callOCR(imageUrl) {
+  console.log("IMAGE URL: " + imageUrl);
+  // const data = await ocrCreate("receipt.jpg");
+  const data = await ocrCreate(imageUrl);
+  const totalPrice = getTotal(data);
+  console.log("Total price is : " + totalPrice);
+  return totalPrice;
+}
+
+// callOCR();
+
+// export default callOCR;
