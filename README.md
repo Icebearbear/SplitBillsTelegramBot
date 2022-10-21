@@ -23,3 +23,12 @@ pip install
 
 Scan receipt to get numerical total amount value
 ref: https://ocr.space/ocrapi
+https://www.sanity.io/guides/telegram-bot-with-node-and-sanity
+
+## State Machine
+
+https://levelup.gitconnected.com/
+
+## Telegram photo dealing
+
+creating-a-conversational-telegram-bot-in-node-js-with-a-finite-state-machine-and-async-await-ca44f03874f9

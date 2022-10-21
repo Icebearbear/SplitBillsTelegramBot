@@ -18,6 +18,9 @@ class Context {
     this.text = text;
   }
   changeText(additionalText) {
+    this.text = additionalText;
+  }
+  addText(additionalText) {
     this.text += additionalText;
   }
 

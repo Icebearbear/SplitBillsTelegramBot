@@ -110,6 +110,18 @@ const methods = {
     const opts = setKeyboard(["Confirm", "Retry"]);
     return [text, opts];
   },
+  onGotInputAmountError: function () {
+    console.log("enter input amount error");
+    const text = "Please input only number or decimal number";
+    const opts = hideKeyboard();
+    return [text, opts];
+  },
+  onGotInputAmountErrorToCmd: function () {
+    const text =
+      "Input amount is selected. Please input the bill amount manually";
+    const opts = hideKeyboard();
+    return [text, opts];
+  },
   onGotInputRetryCmd: function () {
     const text = "Retry new amount is selected. Please input the bill amount";
     const opts = hideKeyboard();

@@ -60,7 +60,11 @@ export function getEventFromStateAndMessage(state, text) {
     ///////////////////////////////////////////
     /** Input Amount */
     case "waitingInputAmountCmd":
-      return "gotInputAmount";
+      if (text === "wrong type") {
+        return "gotInputAmountError"; // error when data type is wrong
+      } else {
+        return "gotInputAmount";
+      }
 
     case "waitingInputAmount":
       if (text === "Confirm") {
@@ -69,6 +73,10 @@ export function getEventFromStateAndMessage(state, text) {
       if (text === "Retry") {
         return "gotInputRetryCmd";
       }
+
+    case "waitingInputAmountError":
+      return "gotInputAmountErrorToCmd";
+
     case "waitingInputPriceConfirm":
       if (text === "Add another amount") {
         return "gotAnotherAmountForInputAmount";
@@ -123,7 +131,10 @@ export function makeTransition(fsm, transition) {
       return fsm.gotInputAmountCmd();
     case "gotInputAmount":
       return fsm.gotInputAmount();
-
+    case "gotInputAmountError":
+      return fsm.gotInputAmountError();
+    case "gotInputAmountErrorToCmd":
+      return fsm.gotInputAmountErrorToCmd();
     case "gotInputRetryCmd":
       return fsm.gotInputRetryCmd();
     case "gotInputRetry":

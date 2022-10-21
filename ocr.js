@@ -1,6 +1,10 @@
 import fs from "fs";
 import axios from "axios";
 import FormData from "form-data";
+import * as dotenv from "dotenv";
+dotenv.config();
+
+const ocrToken = process.env.OCR_TOKEN;
 
 export async function ocrCreate(imageUrl) {
   try {
@@ -18,7 +22,7 @@ export async function ocrCreate(imageUrl) {
       method: "POST",
       url: "https://api.ocr.space/parse/image",
       headers: {
-        apiKey: "K82458536388957",
+        apiKey: ocrToken,
         ...formData.getHeaders(),
       },
       data: formData,

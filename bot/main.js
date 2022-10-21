@@ -12,6 +12,7 @@ dotenv.config();
 
 const token = process.env.TELEGRAM_TOKEN;
 
+const errorMsg = "Please Input a number or decimal number";
 function createFsm() {
   return StateMachine({
     init: "waitingStart",
@@ -54,18 +55,28 @@ function jumpToNextState(th, stateBefore, message, fsm) {
   const statesList = [
     "waitingCalculateBills",
     "waitingShowWebApp",
-    "onGotCalculateBillsFrInputAmount",
+    "waitingCalculateBillsFrInputAmount",
+    "waitingInputAmountError",
   ];
   console.log(
     "JUMP STATE ,",
     stateBefore,
     statesList.indexOf(stateBefore) != -1
   );
-  // if (stateBefore === "waitingShowWebApp") {
-  //   message.text = "";
-  // }
   if (statesList.indexOf(stateBefore) != -1) {
     th.respondTo(message, fsm);
+  }
+}
+
+async function changeTextIfWrongType(th, stateBefore, text) {
+  if (stateBefore === "waitingInputAmountCmd") {
+    th.setManualInput(text);
+    console.log("change input if data type wrong", th.getManualInput());
+    if (th.getManualInput() === null) {
+      return "wrong type";
+    }
+  } else {
+    return text;
   }
 }
 
@@ -74,11 +85,11 @@ async function stateFunctions(th, stateBefore, message, context) {
     console.log("before ocr");
     // th.setTotalBill(await uploadToOCR(message));
     th.setTotalBill(2000);
-    context.changeText(th.getTotalBill());
+    context.addText(th.getTotalBill());
   }
   if (stateBefore === "waitingInputAmountCmd") {
     console.log("enter change input amount message");
-    context.changeText(message.text);
+    context.addText(message.text);
   }
   if (stateBefore === "waitingCalculateBills") {
     console.log("enter calculate split bills");
@@ -95,7 +106,7 @@ async function stateFunctions(th, stateBefore, message, context) {
     // );
     const summary = "THESE ARE MOCK SUMMARY";
     console.log("SUMMARY BILLS :" + summary);
-    context.changeText(summary);
+    context.addText(summary);
   }
 }
 
@@ -106,6 +117,7 @@ export default class Bot {
     this.client = new TelegramBotClient(token, { polling: true });
     this.membersCount = 0;
     this.totalBill = 0;
+    this.manualInput = null;
   }
 
   getMembersCount() {
@@ -119,6 +131,20 @@ export default class Bot {
   }
   setTotalBill(bill) {
     this.totalBill = bill;
+  }
+  getManualInput() {
+    return this.manualInput;
+  }
+  setManualInput(inp) {
+    // check if inp (type string) can be converted to Integer, Double, or value is more than zero
+    if (/^\d+$/.test(inp) || !isNaN(parseFloat(inp))) {
+      if (inp > 0) {
+        this.manualInput = inp;
+      }
+    } else {
+      this.manualInput = null;
+      console.log("wrong input type");
+    }
   }
 
   start() {
@@ -139,10 +165,12 @@ export default class Bot {
 
     while (!fsm.is("stop")) {
       console.log("current state : " + fsm.state);
-      let text = prevReply.text;
+      // let text = prevReply.text;
       var self = this.client;
 
+      let text = await changeTextIfWrongType(this, fsm.state, prevReply.text);
       //get the transition event according to current state and input command
+      console.log(text);
       let event = getEventFromStateAndMessage(fsm.state, text);
       console.log("received event : " + event);
 
@@ -192,62 +220,3 @@ export default class Bot {
 
 const bot = new Bot(token);
 bot.start();
-
-// self.on("callback_query", function onCallbackQuery(callbackQuery) {
-//   console.log("inside callback query");
-//   const msg = callbackQuery.message;
-//   let text;
-//   const opts = {
-//     chat_id: msg.chat.id,
-//     message_id: msg.message_id,
-//   };
-//   switch (callbackQuery.data) {
-//     case "newBillCallback":
-//       text = "newbill";
-//     case "billHistoryCallback":
-//       text = "billhistory";
-//   }
-//   console.log("edit", text);
-//   self.editMessageText(text, opts);
-// });
-
-// bot.onText(/\/start/, (msg) => {
-//   const chatId = msg.chat.id;
-//   bot.sendMessage(
-//     chatId,
-//     "Hello welcome! Let's split those bills! \n /newbill --> add new bills \n /history --> view current bills history"
-//   );
-// });
-
-// bot.onText(/\/history/, (msg) => {
-//   const chatId = msg.chat.id;
-
-//   // retrieve bills from db
-
-//   const opts = {
-//     reply_markup: {
-//       inline_keyboard: [
-//         [{ text: "View Web App", callback_data: "webappView" }],
-//       ],
-//     },
-//   };
-//   // display all bills history
-//   bot.sendMessage(
-//     msg.from.id,
-//     "This is your bills history \n click the button to see  the web app version",
-//     opts
-//   );
-// });
-// bot.onText(/\/newbill/, (msg) => {
-//   const chatId = msg.chat.id;
-//   const opts = {
-//     reply_markup: {
-//       inline_keyboard: [
-//         [{ text: "Add receipt", callback_data: "addReceipt" }],
-//         [{ text: "Input Amount", callback_data: "inputAmount" }],
-//       ],
-//     },
-//   };
-//   bot.sendMessage(msg.from.id, "NewBill text", opts);
-// });
-// // handle callback queries

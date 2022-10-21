@@ -101,6 +101,19 @@ const transitions = [
     from: "waitingInputAmountCmd",
     to: "waitingInputAmount",
   },
+
+  // data type error ////
+  {
+    name: "gotInputAmountError",
+    from: "waitingInputAmountCmd",
+    to: "waitingInputAmountError",
+  },
+  {
+    name: "gotInputAmountErrorToCmd",
+    from: "waitingInputAmountError",
+    to: "waitingInputAmountCmd",
+  },
+  //////////////////////////
   {
     name: "gotInputRetryCmd",
     from: "waitingInputAmount",
