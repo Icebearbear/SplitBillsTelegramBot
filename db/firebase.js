@@ -16,6 +16,8 @@ import {
   collection,
   where,
   addDoc,
+  setDoc,
+  doc,
 } from "firebase/firestore";
 
 import firebaseConfig from "./firebase_config.js";
@@ -27,28 +29,39 @@ function firebase() {
 }
 // check if user exist and create user accordingly
 async function checkUser(userData) {
-  console.log(userData, userData.id);
-  // query user
-  const queries = query(
-    collection(db, "user"),
-    where("uid", "==", userData.id)
-  );
-  const docSnapshot = await getDocs(queries);
-  const splitbillRef = collection(db, "user");
-  if (docSnapshot.docs.length == 0) {
-    console.log("user doesnt exist");
-    //create user
-    const docRef = await addDoc(splitbillRef, userData);
-    console.log("created user");
+  // convert fields to string before saving to db
+  for (var key in userData) {
+    userData[key] = userData[key].toString();
   }
+  console.log(userData, userData.id);
+  const userRef = doc(db, "user", userData.id);
+  await setDoc(userRef, userData);
 }
 
-// store state in telegrambot when add more bill before closing the tab
-
 // after the tab is closed, save list of [Bill] amount as an entry with the userId
+async function saveBill(billObj) {
+  console.log("entered save bill, ");
+  var docId = null;
+  const billRef = collection(db, "bills");
+  await addDoc(billRef, billObj)
+    .then((docRef) => {
+      // console.log("added bill ", docRef);
+      // console.log(docRef.id);
+      docId = docRef.id;
+    })
+    .then(() => {
+      return docId;
+    });
+  return docId;
+}
 
 // also save the bill split [Summary] with id of Bill entry id
-
+async function saveSummary(summaryObj) {
+  console.log("entered save summary ");
+  const summaryRef = collection(db, "summary");
+  const docRef = await addDoc(summaryRef, summaryObj);
+  console.log("added summary");
+}
 const userd = {
   id: 685948947,
   is_bot: false,
@@ -56,5 +69,7 @@ const userd = {
   username: "icebearyyy",
   language_code: "en",
 };
+const billobj = { bills: [1, 2, 3], userId: "uid" };
 // checkUser(userd);
-export { checkUser, firebase };
+// await saveBill(billobj);
+export { checkUser, saveBill, saveSummary, firebase };

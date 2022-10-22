@@ -40,12 +40,14 @@ function jumpToNextState(th, stateBefore, message, fsm) {
   }
 }
 
-async function changeTextIfWrongType(th, stateBefore, text) {
+async function changeTextIfWrongTypeAndAddToList(th, stateBefore, text) {
+  console.log("ENTER changeTextIfWrongTypeAndAddToList " + text);
   if (stateBefore === "waitingInputAmountCmd") {
     th.setManualInput(text);
-    console.log("change input if data type wrong", th.getManualInput());
     if (th.getManualInput() === null) {
       return "wrong type";
+    } else {
+      return text;
     }
   } else {
     return text;
@@ -56,8 +58,14 @@ async function stateFunctions(th, stateBefore, message, context) {
   if (stateBefore === "waitingAddReceipt" && message.photo) {
     console.log("before ocr");
     // th.setTotalBill(await uploadToOCR(message));
-    th.setTotalBill(2000);
-    context.addText(th.getTotalBill());
+    th.setReceiptInput("2000");
+    context.addText(th.getReceiptInput());
+  }
+  if (stateBefore === "waitingConfirmPrice") {
+    th.setBillList(th.getReceiptInput());
+  }
+  if (stateBefore === "waitingInputPriceConfirm") {
+    th.setBillList(th.getManualInput());
   }
   if (stateBefore === "waitingInputAmountCmd") {
     console.log("enter change input amount message");
@@ -65,32 +73,48 @@ async function stateFunctions(th, stateBefore, message, context) {
   }
   if (stateBefore === "waitingCalculateBills") {
     console.log("enter calculate split bills");
-    // let noMembers = await self.getChatMemberCount(
-    //   message.chat.id,
-    //   message.from.id
-    // );
-    let noMembers = 2;
-    console.log("nO OF MEMBERS :" + noMembers);
-    th.setMembersCount(noMembers);
-    // const summary = await calculateSplitbills(
-    //   this.getTotalBill(),
-    //   this.getMembersCount()
-    // );
-    const summary = "THESE ARE MOCK SUMMARY";
-    console.log("SUMMARY BILLS :" + summary);
-    context.addText(summary);
+    console.log("Final bill list : " + th.getBillList());
+    const billObj = { bills: th.getBillList(), userId: message.from.id };
+    var billId = null;
+    await th.db
+      .saveBill(billObj)
+      .then((id) => {
+        billId = id;
+      })
+      .then(async () => {
+        // let noMembers = await self.getChatMemberCount(
+        //   message.chat.id,
+        //   message.from.id
+        // );
+        let noMembers = 2;
+        console.log("nO OF MEMBERS BILL ID :" + noMembers + billId);
+        th.setMembersCount(noMembers);
+        // const summary = await calculateSplitbills(
+        //   this.getTotalBill(),
+        //   this.getMembersCount()
+        // );
+        // const summary = createSummary();
+        const summary = "THESE ARE MOCK SUMMARY";
+        context.addText(summary);
+        const summaryObj = { summary: summary, billId: billId };
+        await th.db.saveSummary(summaryObj);
+      });
   }
 }
 
 function calculateSplitbills() {}
 
+function createSummary() {}
+
 export default class Bot {
   constructor(token) {
     this.client = new TelegramBotClient(token, { polling: true });
     this.membersCount = 0;
-    this.totalBill = 0;
+    this.receiptInput = 0;
     this.manualInput = null;
     this.db = db;
+    // store state in telegrambot when add more bill before closing the tab
+    this.billList = [];
   }
 
   getMembersCount() {
@@ -99,10 +123,10 @@ export default class Bot {
   setMembersCount(inp) {
     this.membersCount = inp;
   }
-  getTotalBill() {
+  getReceiptInput() {
     return this.totalBill;
   }
-  setTotalBill(bill) {
+  setReceiptInput(bill) {
     this.totalBill = bill;
   }
   getManualInput() {
@@ -118,6 +142,12 @@ export default class Bot {
       this.manualInput = null;
       console.log("wrong input type");
     }
+  }
+  setBillList(bill) {
+    this.billList.push(parseFloat(bill));
+  }
+  getBillList() {
+    return this.billList;
   }
 
   start() {
@@ -141,7 +171,12 @@ export default class Bot {
       // let text = prevReply.text;
       var self = this.client;
 
-      let text = await changeTextIfWrongType(this, fsm.state, prevReply.text);
+      let text = await changeTextIfWrongTypeAndAddToList(
+        this,
+        fsm.state,
+        prevReply.text
+      );
+
       //get the transition event according to current state and input command
       console.log(text);
       let event = getEventFromStateAndMessageAndDatabaseFunctions(
