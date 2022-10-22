@@ -54,6 +54,34 @@ async function changeTextIfWrongTypeAndAddToList(th, stateBefore, text) {
   }
 }
 
+async function saveBillsAndSummaryToDb(th, message, context) {
+  const billObj = { bills: th.getBillList(), userId: message.from.id };
+  var billId = null;
+  await th.db
+    .saveBill(billObj)
+    .then((id) => {
+      billId = id;
+    })
+    .then(async () => {
+      // let noMembers = await self.getChatMemberCount(
+      //   message.chat.id,
+      //   message.from.id
+      // );
+      let noMembers = 2;
+      console.log("nO OF MEMBERS BILL ID :" + noMembers + billId);
+      th.setMembersCount(noMembers);
+      // const summary = await calculateSplitbills(
+      //   this.getTotalBill(),
+      //   this.getMembersCount()
+      // );
+      // const summary = createSummary();
+      const summary = "THESE ARE MOCK SUMMARY";
+      context.addText(summary);
+      const summaryObj = { summary: summary, billId: billId };
+      await th.db.saveSummary(summaryObj);
+    });
+}
+
 async function stateFunctions(th, stateBefore, message, context) {
   if (stateBefore === "waitingAddReceipt" && message.photo) {
     console.log("before ocr");
@@ -74,31 +102,8 @@ async function stateFunctions(th, stateBefore, message, context) {
   if (stateBefore === "waitingCalculateBills") {
     console.log("enter calculate split bills");
     console.log("Final bill list : " + th.getBillList());
-    const billObj = { bills: th.getBillList(), userId: message.from.id };
-    var billId = null;
-    await th.db
-      .saveBill(billObj)
-      .then((id) => {
-        billId = id;
-      })
-      .then(async () => {
-        // let noMembers = await self.getChatMemberCount(
-        //   message.chat.id,
-        //   message.from.id
-        // );
-        let noMembers = 2;
-        console.log("nO OF MEMBERS BILL ID :" + noMembers + billId);
-        th.setMembersCount(noMembers);
-        // const summary = await calculateSplitbills(
-        //   this.getTotalBill(),
-        //   this.getMembersCount()
-        // );
-        // const summary = createSummary();
-        const summary = "THESE ARE MOCK SUMMARY";
-        context.addText(summary);
-        const summaryObj = { summary: summary, billId: billId };
-        await th.db.saveSummary(summaryObj);
-      });
+
+    await saveBillsAndSummaryToDb(th, message, context);
   }
 }
 

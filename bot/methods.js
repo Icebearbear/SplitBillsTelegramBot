@@ -25,6 +25,13 @@ function getGoingMainContent() {
   return [text, opts];
 }
 
+function getReceiptOrInputManually(msg) {
+  console.log("enter ongotNewBill");
+  const opts = setKeyboard(["Add receipt", "Input amount"]);
+  const text = `${msg}Add receipt --> take picture of your receipt and we will do the rest! \nInput amount --> input the amount manually yourself!`;
+  return [text, opts];
+}
+
 function getMainContent(txt) {
   const opts = setKeyboard(["New bill", "Bill history"]);
   const text = `${txt} \nSelect a function \n new bill to start splitting bill \n history to show current split bill history`;
@@ -39,11 +46,7 @@ const methods = {
     return getMainContent("Lets begin!");
   },
   onGotNewBill: function () {
-    console.log("enter ongotNewBill");
-    const opts = setKeyboard(["Add receipt", "Input amount"]);
-    const text =
-      "Add receipt --> take picture of your receipt and we will do the rest! \nInput amount --> input the amount manually yourself!";
-    return [text, opts];
+    return getReceiptOrInputManually("");
   },
   onGotAddReceipt: function () {
     console.log("enter onGotAddReceipt");
@@ -70,12 +73,7 @@ const methods = {
     return [text, opts];
   },
   onGotAddMoreReceipt: function () {
-    console.log("enter onGotAddReceipt");
-    const opts = hideKeyboard();
-    const text =
-      "Add receipt is selected. Please upload a picture of your receipt";
-    // waiting for pic upload
-    return [text, opts];
+    return getReceiptOrInputManually("Add More is selected ");
   },
   onGotCalculateBills: function () {
     const text = "Calculating splits now. Please wait a moment...";
@@ -142,10 +140,7 @@ const methods = {
     return [text, opts];
   },
   onGotAnotherAmountForInputAmount: function () {
-    const text =
-      "Input another amount is selected. Please input the bill amount manually";
-    const opts = hideKeyboard();
-    return [text, opts];
+    return getReceiptOrInputManually("Add more is selected ");
   },
   ////// History ///////
   onGotBillHistory: function () {

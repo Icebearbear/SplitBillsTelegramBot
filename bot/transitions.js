@@ -57,7 +57,7 @@ const transitions = [
   {
     name: "gotAddMoreReceipt",
     from: "waitingConfirmPrice",
-    to: "waitingAddReceipt",
+    to: "waitingNewBill",
   },
   {
     name: "gotCalculateBills",
@@ -132,7 +132,7 @@ const transitions = [
   {
     name: "gotAnotherAmountForInputAmount",
     from: "waitingInputPriceConfirm",
-    to: "waitingInputAmountCmd",
+    to: "waitingNewBill",
   },
 ];
 
