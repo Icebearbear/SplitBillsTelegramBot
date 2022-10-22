@@ -2,11 +2,12 @@ import fs from "fs";
 import axios from "axios";
 import FormData from "form-data";
 import * as dotenv from "dotenv";
+
 dotenv.config();
 
 const ocrToken = process.env.OCR_TOKEN;
 
-export async function ocrCreate(imageUrl) {
+async function ocrCreate(imageUrl) {
   try {
     const formData = new FormData();
     // formData.append("file", fs.createReadStream(input));
@@ -58,7 +59,7 @@ function getTotal(data) {
   return total;
 }
 
-export default async function callOCR(imageUrl) {
+async function callOCR(imageUrl) {
   console.log("IMAGE URL: " + imageUrl);
   // const data = await ocrCreate("receipt.jpg");
   const data = await ocrCreate(imageUrl);
@@ -67,6 +68,34 @@ export default async function callOCR(imageUrl) {
   return totalPrice;
 }
 
+export default async function uploadToOCR(message) {
+  console.log("entered if else for gotNewBillToAddReceipt");
+  const imageId = message.photo[0].file_id;
+  var imageUrl;
+  var extractedPrice = 100;
+  await axios
+    .get(`https://api.telegram.org/bot${token}/getFile?file_id=${imageId}`)
+    .then(async (res) => {
+      console.log(res.data);
+      const filePath = res.data.result.file_path;
+      console.log(filePath);
+      // image url in Telegram server
+      imageUrl = `https://api.telegram.org/file/bot${token}/${filePath}`;
+      // pass to a function of OCR and get the extracted price
+      //for now hardcode a pic first
+
+      extractedPrice = await callOCR(imageUrl); // pass in a base64, url
+      console.log("end axios :" + extractedPrice);
+    })
+    .then(() => {
+      return extractedPrice;
+    })
+    .catch((e) => {
+      console.log("ERROR IN OCR : " + e);
+    });
+  console.log("return price", extractedPrice);
+  return extractedPrice;
+}
 // callOCR();
 
 // export default callOCR;

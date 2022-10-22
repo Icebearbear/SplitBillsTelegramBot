@@ -1,53 +1,25 @@
 import TelegramBotClient from "node-telegram-bot-api";
 import StateMachine from "javascript-state-machine";
 import * as dotenv from "dotenv";
-import axios from "axios";
-import ocrCreate from "../ocr.js";
-import { getEventFromStateAndMessage, makeTransition } from "./events.js";
+import {
+  getEventFromStateAndMessageAndDatabaseFunctions,
+  makeTransition,
+} from "./events.js";
 import transitions from "./transitions.js";
 import methods from "./methods.js";
 import Context from "./model/Context.js";
-import callOCR from "../ocr.js";
+import uploadToOCR from "../ocr.js";
+import * as db from "../db/firebase.js";
 dotenv.config();
 
 const token = process.env.TELEGRAM_TOKEN;
 
-const errorMsg = "Please Input a number or decimal number";
 function createFsm() {
   return StateMachine({
     init: "waitingStart",
     transitions: transitions,
     methods: methods,
   });
-}
-
-async function uploadToOCR(message) {
-  console.log("entered if else for gotNewBillToAddReceipt");
-  const imageId = message.photo[0].file_id;
-  var imageUrl;
-  var extractedPrice = 100;
-  await axios
-    .get(`https://api.telegram.org/bot${token}/getFile?file_id=${imageId}`)
-    .then(async (res) => {
-      console.log(res.data);
-      const filePath = res.data.result.file_path;
-      console.log(filePath);
-      // image url in Telegram server
-      imageUrl = `https://api.telegram.org/file/bot${token}/${filePath}`;
-      // pass to a function of OCR and get the extracted price
-      //for now hardcode a pic first
-
-      extractedPrice = await callOCR(imageUrl); // pass in a base64, url
-      console.log("end axios :" + extractedPrice);
-    })
-    .then(() => {
-      return extractedPrice;
-    })
-    .catch((e) => {
-      console.log("ERROR IN OCR : " + e);
-    });
-  console.log("return price", extractedPrice);
-  return extractedPrice;
 }
 
 // for state that doesnt require inputs to transition
@@ -118,6 +90,7 @@ export default class Bot {
     this.membersCount = 0;
     this.totalBill = 0;
     this.manualInput = null;
+    this.db = db;
   }
 
   getMembersCount() {
@@ -171,7 +144,12 @@ export default class Bot {
       let text = await changeTextIfWrongType(this, fsm.state, prevReply.text);
       //get the transition event according to current state and input command
       console.log(text);
-      let event = getEventFromStateAndMessage(fsm.state, text);
+      let event = getEventFromStateAndMessageAndDatabaseFunctions(
+        fsm.state,
+        text,
+        this.db,
+        message
+      );
       console.log("received event : " + event);
 
       // check if the event is in fsm, if no enter the if statement

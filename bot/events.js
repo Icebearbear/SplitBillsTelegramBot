@@ -1,4 +1,9 @@
-export function getEventFromStateAndMessage(state, text) {
+export function getEventFromStateAndMessageAndDatabaseFunctions(
+  state,
+  text,
+  db,
+  message
+) {
   console.log("getEvent", state, text);
   switch (state) {
     case "waitingStart":
@@ -7,8 +12,10 @@ export function getEventFromStateAndMessage(state, text) {
       }
       if (text === "Bill history") {
         return "gotBillHistory";
-      } else {
-        return text === "/start" && "gotStart";
+      }
+      if (text === "/start") {
+        db.checkUser(message.from);
+        return "gotStart";
       }
     case "waitingNewBill":
       if (text === "Add receipt") {
