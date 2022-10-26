@@ -39,17 +39,28 @@ const transitions = [
     from: "waitingAddReceipt",
     to: "waitingPrintExtractedPrice",
   },
+  {
+    name: "gotSelectedPrice",
+    from: "waitingPrintExtractedPrice",
+    to: "waitingGotSelectedPrice",
+  },
 
   // on hold //
   {
-    name: "gotRetryPrice",
-    from: "waitingPrintExtractedPrice",
-    to: "waitingRetryPrice",
+    name: "gotSelectAnotherPrice",
+    from: "waitingGotSelectedPrice",
+    to: "waitingPrintExtractedPrice",
   },
+  {
+    name: "gotErrorReceiptInput",
+    from: "waitingPrintExtractedPrice",
+    to: "waitingPrintExtractedPrice",
+  },
+
   // /////////////
   {
     name: "gotConfirmPrice",
-    from: "waitingPrintExtractedPrice",
+    from: "waitingGotSelectedPrice",
     to: "waitingConfirmPrice",
   },
 
@@ -57,7 +68,7 @@ const transitions = [
   {
     name: "gotAddMoreReceipt",
     from: "waitingConfirmPrice",
-    to: "waitingAddReceipt",
+    to: "waitingNewBill",
   },
   {
     name: "gotCalculateBills",
@@ -101,6 +112,19 @@ const transitions = [
     from: "waitingInputAmountCmd",
     to: "waitingInputAmount",
   },
+
+  // data type error ////
+  {
+    name: "gotInputAmountError",
+    from: "waitingInputAmountCmd",
+    to: "waitingInputAmountError",
+  },
+  {
+    name: "gotInputAmountErrorToCmd",
+    from: "waitingInputAmountError",
+    to: "waitingInputAmountCmd",
+  },
+  //////////////////////////
   {
     name: "gotInputRetryCmd",
     from: "waitingInputAmount",
@@ -119,7 +143,7 @@ const transitions = [
   {
     name: "gotAnotherAmountForInputAmount",
     from: "waitingInputPriceConfirm",
-    to: "waitingInputAmountCmd",
+    to: "waitingNewBill",
   },
 ];
 
