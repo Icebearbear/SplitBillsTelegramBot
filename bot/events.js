@@ -38,11 +38,20 @@ export function getEventFromStateAndMessageAndDatabaseFunctions(
     case "waitingAddReceipt":
       return "gotPrintedPrice";
     case "waitingPrintExtractedPrice":
+      if (text === "Retry upload receipt") {
+        return "gotAddReceipt";
+      }
+      if (text === "wrong input") {
+        return "gotErrorReceiptInput";
+      } else {
+        return "gotSelectedPrice";
+      }
+    case "waitingGotSelectedPrice":
       if (text === "Confirm") {
         return "gotConfirmPrice";
       }
-      if (text === "Retry extracting price") {
-        return "gotRetryPrice";
+      if (text === "Select another amount") {
+        return "gotSelectAnotherPrice";
       }
     case "waitingConfirmPrice":
       if (text === "Add more") {
@@ -110,7 +119,12 @@ export function makeTransition(fsm, transition) {
       return fsm.gotAddReceipt();
     case "gotPrintedPrice":
       return fsm.gotPrintedPrice();
-
+    case "gotSelectedPrice":
+      return fsm.gotSelectedPrice();
+    case "gotSelectAnotherPrice":
+      return fsm.gotSelectAnotherPrice();
+    case "gotErrorReceiptInput":
+      return fsm.gotErrorReceiptInput();
     case "gotConfirmPrice":
       return fsm.gotConfirmPrice();
     case "gotRetryPrice":

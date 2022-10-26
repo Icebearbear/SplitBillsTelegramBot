@@ -1,3 +1,8 @@
+let extractedBillChoices = [];
+function setExtractedBillChoices(choices) {
+  console.log("choices", choices);
+  extractedBillChoices = choices;
+}
 function hideKeyboard() {
   return {
     reply_markup: {
@@ -7,6 +12,7 @@ function hideKeyboard() {
 }
 
 function setKeyboard(inputs) {
+  console.log("set keyboard input", inputs);
   const keyboardList = [];
   inputs.forEach((inp) => {
     keyboardList.push([inp]);
@@ -34,7 +40,15 @@ function getReceiptOrInputManually(msg) {
 
 function getMainContent(txt) {
   const opts = setKeyboard(["New bill", "Bill history"]);
-  const text = `${txt} \nSelect a function \n new bill to start splitting bill \n history to show current split bill history`;
+  const text = `${txt} Select a function \nNew bill --> start splitting bill \nBill history --> show current split bill history`;
+  return [text, opts];
+}
+
+function getReceiptAmountChoices() {
+  console.log("onGotSelectedAnotherPrice ");
+  console.log("extracted ", extractedBillChoices);
+  const text = "Price is extracted. Please select the correct price";
+  const opts = setKeyboard(extractedBillChoices);
   return [text, opts];
 }
 
@@ -57,8 +71,11 @@ const methods = {
     return [text, opts];
   },
   onGotPrintedPrice: function () {
-    const text = "Received the price, the price is ----> ";
-    const opts = setKeyboard(["Confirm", "Retry extracting price"]);
+    return getReceiptAmountChoices();
+  },
+  onGotSelectedPrice: function () {
+    const text = "Selected price is ----> ";
+    const opts = setKeyboard(["Confirm", "Select another amount"]);
     return [text, opts];
   },
   onGotConfirmPrice: function () {
@@ -67,10 +84,11 @@ const methods = {
     const opts = setKeyboard(["Add more", "I am done. calculate splits"]);
     return [text, opts];
   },
-  onGotRetryPrice: function () {
-    const text = "Retry extracting price is selected.";
-    const opts = hideKeyboard();
-    return [text, opts];
+  onGotSelectAnotherPrice: function () {
+    return getReceiptAmountChoices();
+  },
+  onGotErrorReceiptInput: function () {
+    return getReceiptAmountChoices();
   },
   onGotAddMoreReceipt: function () {
     return getReceiptOrInputManually("Add More is selected ");
@@ -156,4 +174,4 @@ const methods = {
   },
 };
 
-export default methods;
+export { methods, setExtractedBillChoices };

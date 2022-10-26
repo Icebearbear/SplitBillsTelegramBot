@@ -39,17 +39,28 @@ const transitions = [
     from: "waitingAddReceipt",
     to: "waitingPrintExtractedPrice",
   },
+  {
+    name: "gotSelectedPrice",
+    from: "waitingPrintExtractedPrice",
+    to: "waitingGotSelectedPrice",
+  },
 
   // on hold //
   {
-    name: "gotRetryPrice",
-    from: "waitingPrintExtractedPrice",
-    to: "waitingRetryPrice",
+    name: "gotSelectAnotherPrice",
+    from: "waitingGotSelectedPrice",
+    to: "waitingPrintExtractedPrice",
   },
+  {
+    name: "gotErrorReceiptInput",
+    from: "waitingPrintExtractedPrice",
+    to: "waitingPrintExtractedPrice",
+  },
+
   // /////////////
   {
     name: "gotConfirmPrice",
-    from: "waitingPrintExtractedPrice",
+    from: "waitingGotSelectedPrice",
     to: "waitingConfirmPrice",
   },
 
