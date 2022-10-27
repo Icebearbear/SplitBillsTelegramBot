@@ -58,26 +58,21 @@ async function changeTextIfWrongTypeAndAddToList(th, stateBefore, text) {
 }
 
 async function saveBillsAndSummaryToDb(th, message, context) {
-  const billObj = { bills: th.getBillList(), userId: message.from.id };
-  var billId = null;
-  await th.db
-    .saveBill(billObj)
-    .then((id) => {
-      billId = id;
-    })
-    .then(async () => {
-      // get all members name
-      // const members = []
-      const self = th.client;
-      const noMembers = await self.getChatMemberCount(message.chat.id);
-      th.setMembersCount(noMembers);
-      console.log("nO OF MEMBERS BILL ID :" + th.getMembersCount() + billId);
+  // get all members name
+  // const members = []
+  const self = th.client;
+  const noMembers = await self.getChatMemberCount(message.chat.id);
+  th.setMembersCount(noMembers);
+  // console.log("nO OF MEMBERS BILL ID :" + th.getMembersCount() + billId);
 
-      console.log("lists ", th.getBillList());
-      const summary = createSummary(th.getBillList(), th.getMembersCount());
-      context.addText(summary);
-      await th.db.saveSummary({ summary: summary, billId: billId });
-    });
+  console.log("lists ", th.getBillList());
+  const summary = createSummary(th.getBillList(), th.getMembersCount());
+  context.addText(summary);
+  await th.db.saveSummary({
+    summary: summary,
+    bills: th.getBillList(),
+    chatId: message.chat.id,
+  });
 }
 
 async function stateFunctions(th, stateBefore, message, context, evnt) {
@@ -86,11 +81,17 @@ async function stateFunctions(th, stateBefore, message, context, evnt) {
   }
   if (stateBefore === "waitingConfirmPrice") {
     console.log("enter waiting confirm price");
-    th.setBillList({ amount: th.getReceiptInput(), from: message.from.id });
+    th.setBillList({
+      amount: th.getReceiptInput(),
+      from: { uid: message.from.id, username: message.from.username },
+    });
   }
   if (stateBefore === "waitingInputPriceConfirm") {
     console.log("enter waiting confirm input price");
-    th.setBillList({ amount: th.getManualInput(), from: message.from.id });
+    th.setBillList({
+      amount: th.getManualInput(),
+      from: { uid: message.from.id, username: message.from.username },
+    });
   }
   if (
     stateBefore === "waitingInputAmount" ||
@@ -104,6 +105,18 @@ async function stateFunctions(th, stateBefore, message, context, evnt) {
     console.log("Final bill list : " + th.getBillList());
 
     await saveBillsAndSummaryToDb(th, message, context);
+  }
+  if (stateBefore === "waitingHistory") {
+    console.log("entered waiting history");
+    const datas = await th.db.getSummary(message.chat.id);
+    var history = "";
+    datas.forEach((data) => {
+      history += `\n\nSummary : ${data.summary}\nBills:\n`;
+      data.bills.forEach((bill) => {
+        history += `$${bill.amount} from ${bill.from.username}\n`;
+      });
+    });
+    context.addText(history);
   }
 }
 
@@ -192,6 +205,7 @@ export default class Bot {
     let fsm = createFsm();
     this.client.on("message", (message) => {
       if (!message.reply_to_message) {
+        console.log("OUTSIDE ", message);
         this.respondTo(message, fsm);
       }
     });
@@ -210,10 +224,10 @@ export default class Bot {
   async respondTo(message, fsm) {
     let prevReply = message;
     let returnedVal;
-
+    console.log("OUTSIDE 2", prevReply);
     while (!fsm.is("stop")) {
       console.log("current state : " + fsm.state);
-      console.log(message);
+      console.log("INSIDE ", prevReply);
       var self = this.client;
 
       let text = await changeTextIfWrongTypeAndAddToList(
@@ -227,7 +241,7 @@ export default class Bot {
         fsm.state,
         text,
         this.db,
-        message
+        prevReply
       );
       console.log("received event : " + event);
 
@@ -241,7 +255,7 @@ export default class Bot {
       }
       console.log("stateBefore : ", fsm.state);
       if (fsm.state === "waitingAddReceipt") {
-        this.setExtractedBillAmount(await uploadToOCR(message));
+        this.setExtractedBillAmount(await uploadToOCR(prevReply));
         await methods.setExtractedBillChoices(this.getExtractedBillAmount());
       }
       if (fsm.state === "waitingStart") {
@@ -256,7 +270,7 @@ export default class Bot {
 
       // class to keep the values
       const context = new Context(returnedVal);
-      await stateFunctions(this, fsm.state, message, context, event);
+      await stateFunctions(this, fsm.state, prevReply, context, event);
 
       console.log("next state : " + fsm.state);
       // self.on("polling_error", console.log);

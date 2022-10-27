@@ -62,6 +62,16 @@ async function saveSummary(summaryObj) {
   const docRef = await addDoc(summaryRef, summaryObj);
   console.log("added summary");
 }
+
+async function getSummary(chatId) {
+  const data = [];
+  const q = query(collection(db, "summary"), where("chatId", "==", chatId));
+  const docSnapshot = await getDocs(q);
+  const docs = docSnapshot.docs.map((doc) => {
+    data.push(doc.data());
+  });
+  return data;
+}
 const userd = {
   id: 685948947,
   is_bot: false,
@@ -72,4 +82,6 @@ const userd = {
 const billobj = { bills: [1, 2, 3], userId: "uid" };
 // checkUser(userd);
 // await saveBill(billobj);
-export { checkUser, saveBill, saveSummary, firebase };
+// const d = await getSummary(-758461840);
+// console.log(d);
+export { checkUser, saveSummary, getSummary, firebase };
