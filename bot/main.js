@@ -1,10 +1,7 @@
 import TelegramBotClient from "node-telegram-bot-api";
 import StateMachine from "javascript-state-machine";
 import * as dotenv from "dotenv";
-import {
-  getEventFromStateAndMessageAndDatabaseFunctions,
-  makeTransition,
-} from "./events.js";
+import { getEventFromStateAndMessage, makeTransition } from "./events.js";
 import transitions from "./transitions.js";
 import * as methods from "./methods.js";
 import Context from "./model/Context.js";
@@ -16,7 +13,7 @@ const token = process.env.TELEGRAM_TOKEN;
 
 function createFsm() {
   return StateMachine({
-    init: "waitingStart",
+    init: "waitingInit",
     transitions: transitions,
     methods: methods.methods,
   });
@@ -29,14 +26,16 @@ function jumpToNextState(th, stateBefore, message, fsm) {
     "waitingShowWebApp",
     "waitingCalculateBillsFrInputAmount",
     "waitingInputAmountError",
+    "waitingErrorSelectReceiptOwnerInput",
   ];
   if (statesList.indexOf(stateBefore) != -1) {
     th.respondTo(message, fsm);
   }
 }
 
-async function changeTextIfWrongTypeAndAddToList(th, stateBefore, text) {
-  console.log("ENTER changeTextIfWrongTypeAndAddToList " + text);
+async function changeTextIfWrongTypeAndAddToList(th, stateBefore, message) {
+  const text = message.text;
+  console.log("ENTER changeTextIfWrongTypeAndAddToList " + message);
   if (stateBefore === "waitingInputAmountCmd") {
     th.setManualInput(text);
     if (th.getManualInput() === null) {
@@ -52,21 +51,47 @@ async function changeTextIfWrongTypeAndAddToList(th, stateBefore, text) {
     } else {
       return text;
     }
+  }
+  if (stateBefore === "waitingInit") {
+    if (text === "/join") {
+      th.db.checkUser(message.from);
+      th.setMembersList({
+        id: message.from.id,
+        username: message.from.username,
+      });
+    }
+    if (text === "/ready") {
+      console.log("chat group member : ", th.getMembersList());
+      const chatData = {
+        chat: message.chat,
+        member: th.getMembersList(),
+        date: message.date,
+      };
+      th.db.checkChatGroup(chatData);
+    }
+    return text;
+  }
+  if (stateBefore === "waitingSelectReceiptOwner") {
+    console.log("check waitingSelectReceiptOwner input", text);
+    th.setInputOwner(text);
+    if (th.getInputOwner() === null) {
+      return "wrong input";
+    } else {
+      return text;
+    }
   } else {
     return text;
   }
 }
 
 async function saveBillsAndSummaryToDb(th, message, context) {
-  // get all members name
-  // const members = []
   const self = th.client;
   const noMembers = await self.getChatMemberCount(message.chat.id);
   th.setMembersCount(noMembers);
   // console.log("nO OF MEMBERS BILL ID :" + th.getMembersCount() + billId);
 
   console.log("lists ", th.getBillList());
-  const summary = createSummary(th.getBillList(), th.getMembersCount());
+  const summary = createSummary(th.getBillList(), th.getMembersCount(), th.getInputOwner());
   context.addText(summary);
   await th.db.saveSummary({
     summary: summary,
@@ -77,28 +102,34 @@ async function saveBillsAndSummaryToDb(th, message, context) {
 
 async function stateFunctions(th, stateBefore, message, context, evnt) {
   console.log("inside statefunction :", message.text, stateBefore);
-  if (stateBefore === "waitingAddReceipt" && message.photo) {
-  }
   if (stateBefore === "waitingConfirmPrice") {
     console.log("enter waiting confirm price");
     th.setBillList({
       amount: th.getReceiptInput(),
-      from: { uid: message.from.id, username: message.from.username },
+      from: th.getInputOwner(),
+      // from: { id: message.from.id, username: message.from.username },
     });
   }
   if (stateBefore === "waitingInputPriceConfirm") {
     console.log("enter waiting confirm input price");
     th.setBillList({
       amount: th.getManualInput(),
-      from: { uid: message.from.id, username: message.from.username },
+      from: th.getInputOwner(),
+      // from: { uid: message.from.id, username: message.from.username },
     });
   }
-  if (
-    stateBefore === "waitingInputAmount" ||
-    stateBefore === "waitingGotSelectedPrice"
-  ) {
+  if (stateBefore === "waitingInputAmount") {
     console.log("enter change input amount message");
-    context.addText(message.text);
+    context.addText(
+      `$${th.getManualInput()} from ${th.getInputOwner().username}`
+    );
+  }
+
+  if (stateBefore === "waitingGotSelectedPrice") {
+    console.log("enter change receipt amount message");
+    context.addText(
+      `$${th.getReceiptInput()} from ${th.getInputOwner().username}`
+    );
   }
   if (stateBefore === "waitingPrintCalculateBills") {
     console.log("enter calculate split bills");
@@ -131,7 +162,7 @@ function calculateSplitbills(billList, noMembers) {
 
 function createSummary(billList, noMembers) {
   const splitAmount = calculateSplitbills(billList, noMembers);
-  const summaryText = `Everyone pays ${splitAmount} to ______`;
+  const summaryText = `Everyone pays ${splitAmount} to ${this.}`;
   return summaryText;
 }
 
@@ -145,6 +176,8 @@ export default class Bot {
     this.extractedBillAmount = [];
     // store state in telegrambot when add more bill before closing the tab
     this.billList = [];
+    this.membersList = [];
+    this.inputOwner = null;
   }
 
   getMembersCount() {
@@ -200,12 +233,43 @@ export default class Bot {
   getExtractedBillAmount() {
     return this.extractedBillAmount;
   }
+  setMembersList(incomingMember) {
+    const add = true;
+    const members = this.membersList;
+    for (var idx in members) {
+      if (members[idx].id === incomingMember.id) {
+        add = false;
+      }
+    }
+    if (add) {
+      this.membersList.push(incomingMember);
+    }
+  }
+  getMembersList() {
+    return this.membersList;
+  }
+  setInputOwner(owner) {
+    const members = this.membersList;
+    console.log(members, owner);
+    for (var idx in members) {
+      console.log(members[idx]);
+      if (members[idx].username === owner) {
+        console.log("set Input", members[idx].username, owner);
+        this.inputOwner = members[idx];
+        return;
+      }
+    }
+    this.inputOwner = null;
+  }
+  getInputOwner() {
+    return this.inputOwner;
+  }
 
   start() {
     let fsm = createFsm();
     this.client.on("message", (message) => {
       if (!message.reply_to_message) {
-        console.log("OUTSIDE ", message);
+        // console.log("OUTSIDE ", message);
         this.respondTo(message, fsm);
       }
     });
@@ -224,25 +288,20 @@ export default class Bot {
   async respondTo(message, fsm) {
     let prevReply = message;
     let returnedVal;
-    console.log("OUTSIDE 2", prevReply);
+    // console.log("OUTSIDE 2", prevReply);
     while (!fsm.is("stop")) {
       console.log("current state : " + fsm.state);
-      console.log("INSIDE ", prevReply);
+      // console.log("INSIDE ", prevReply);
       var self = this.client;
 
       let text = await changeTextIfWrongTypeAndAddToList(
         this,
         fsm.state,
-        prevReply.text
+        prevReply
       );
 
       //get the transition event according to current state and input command
-      let event = getEventFromStateAndMessageAndDatabaseFunctions(
-        fsm.state,
-        text,
-        this.db,
-        prevReply
-      );
+      let event = getEventFromStateAndMessage(fsm.state, text);
       console.log("received event : " + event);
 
       // check if the event is in fsm, if no enter the if statement
@@ -260,10 +319,17 @@ export default class Bot {
       }
       if (fsm.state === "waitingStart") {
         this.reset();
+        const ownerChoice = [];
+        console.log("setting keyboard", this.getMembersList());
+        const members = this.getMembersList();
+        for (var idx in members) {
+          console.log(idx, members[idx].username);
+          ownerChoice.push(members[idx].username);
+        }
+        await methods.setExtractedOwnerChoices(ownerChoice);
       }
       // additional functions on certain states
 
-      console.log("extracted amount ", this.getExtractedBillAmount());
       // do transition and get the contents to be sent as message
       returnedVal = makeTransition(fsm, event);
       console.log("returned values from transition : ", returnedVal);

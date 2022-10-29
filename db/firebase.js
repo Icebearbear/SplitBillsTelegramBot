@@ -38,6 +38,11 @@ async function checkUser(userData) {
   await setDoc(userRef, userData);
 }
 
+async function checkChatGroup(chatData) {
+  console.log(chatData);
+  const chatRef = doc(db, "chatGroup", chatData.chat.id.toString());
+  await setDoc(chatRef, chatData);
+}
 // after the tab is closed, save list of [Bill] amount as an entry with the userId
 async function saveBill(billObj) {
   console.log("entered save bill, ");
@@ -72,6 +77,8 @@ async function getSummary(chatId) {
   });
   return data;
 }
+
+async function saveChatMember(user, chatId) {}
 const userd = {
   id: 685948947,
   is_bot: false,
@@ -84,4 +91,4 @@ const billobj = { bills: [1, 2, 3], userId: "uid" };
 // await saveBill(billobj);
 // const d = await getSummary(-758461840);
 // console.log(d);
-export { checkUser, saveSummary, getSummary, firebase };
+export { checkUser, saveSummary, getSummary, checkChatGroup, firebase };

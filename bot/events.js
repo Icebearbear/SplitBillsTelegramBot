@@ -1,21 +1,22 @@
-export function getEventFromStateAndMessageAndDatabaseFunctions(
-  state,
-  text,
-  db,
-  message
-) {
+export function getEventFromStateAndMessage(state, text) {
   console.log("getEvent", state, text);
   switch (state) {
+    case "waitingInit":
+      if (text === "/ready") {
+        return "gotStart";
+      }
+      if (text === "/join") {
+        return "gotJoin";
+      }
+      if (text === "/start") {
+        return "gotInit";
+      }
     case "waitingStart":
       if (text === "New bill") {
         return "gotNewBill";
       }
       if (text === "Bill history") {
         return "gotBillHistory";
-      }
-      if (text === "/start") {
-        db.checkUser(message.from);
-        return "gotStart";
       }
     case "waitingNewBill":
       if (text === "Add receipt") {
@@ -44,8 +45,16 @@ export function getEventFromStateAndMessageAndDatabaseFunctions(
       if (text === "wrong input") {
         return "gotErrorReceiptInput";
       } else {
+        return "gotSelectReceiptOwner";
+      }
+    case "waitingSelectReceiptOwner":
+      if (text === "wrong input") {
+        return "gotErrorSelectReceiptOwnerInput";
+      } else {
         return "gotSelectedPrice";
       }
+    case "waitingErrorSelectReceiptOwnerInput":
+      return "gotErrorSelectReceiptOwnerToSelectReceiptOwner";
     case "waitingGotSelectedPrice":
       if (text === "Confirm") {
         return "gotConfirmPrice";
@@ -110,6 +119,10 @@ export function makeTransition(fsm, transition) {
   switch (transition) {
     case "gotStart":
       return fsm.gotStart();
+    case "gotJoin":
+      return fsm.gotJoin();
+    case "gotInit":
+      return fsm.gotInit();
     case "gotNewBill":
       return fsm.gotNewBill();
 
@@ -119,10 +132,17 @@ export function makeTransition(fsm, transition) {
       return fsm.gotAddReceipt();
     case "gotPrintedPrice":
       return fsm.gotPrintedPrice();
+    case "gotSelectReceiptOwner":
+      return fsm.gotSelectReceiptOwner();
     case "gotSelectedPrice":
       return fsm.gotSelectedPrice();
     case "gotSelectAnotherPrice":
       return fsm.gotSelectAnotherPrice();
+
+    case "gotErrorSelectReceiptOwnerInput":
+      return fsm.gotErrorSelectReceiptOwnerInput();
+    case "gotErrorSelectReceiptOwnerToSelectReceiptOwner":
+      return fsm.gotErrorSelectReceiptOwnerToSelectReceiptOwner();
     case "gotErrorReceiptInput":
       return fsm.gotErrorReceiptInput();
     case "gotConfirmPrice":

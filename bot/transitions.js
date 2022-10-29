@@ -1,5 +1,11 @@
 const transitions = [
-  { name: "gotStart", from: "waitingStart", to: "waitingStart" },
+  { name: "gotInit", from: "waitingInit", to: "waitingInit" },
+
+  { name: "gotStart", from: "waitingInit", to: "waitingStart" },
+
+  { name: "gotJoin", from: "waitingInit", to: "waitingInit" },
+
+  // { name: "gotStart", from: "waitingStart", to: "waitingStart" },
 
   //// two options from /start
   {
@@ -22,7 +28,7 @@ const transitions = [
   {
     name: "gotBackToMainForHistory",
     from: "waitingHistory",
-    to: "waitingStart",
+    to: "waitingInit",
   },
   /////////////////////////////////////////////
 
@@ -40,8 +46,15 @@ const transitions = [
     to: "waitingPrintExtractedPrice",
   },
   {
-    name: "gotSelectedPrice",
+    name: "gotSelectReceiptOwner",
     from: "waitingPrintExtractedPrice",
+    to: "waitingSelectReceiptOwner",
+    // to: "waitingGotSelectedPrice",
+  },
+  {
+    name: "gotSelectedPrice",
+    from: "waitingSelectReceiptOwner",
+    // from: "waitingPrintExtractedPrice",
     to: "waitingGotSelectedPrice",
   },
 
@@ -56,6 +69,19 @@ const transitions = [
     from: "waitingPrintExtractedPrice",
     to: "waitingPrintExtractedPrice",
   },
+
+  // owner choice error ////
+  {
+    name: "gotErrorSelectReceiptOwnerInput",
+    from: "waitingSelectReceiptOwner",
+    to: "waitingErrorSelectReceiptOwnerInput",
+  },
+  {
+    name: "gotErrorSelectReceiptOwnerToSelectReceiptOwner",
+    from: "waitingErrorSelectReceiptOwnerInput",
+    to: "waitingSelectReceiptOwner",
+  },
+  //////////////////////////
 
   // /////////////
   {
@@ -92,12 +118,12 @@ const transitions = [
   {
     name: "gotBackToMain",
     from: "waitingPrintCalculateBills",
-    to: "waitingStart",
+    to: "waitingInit",
   },
   {
     name: "gotMainFromShowWebApp",
     from: "waitingShowWebApp",
-    to: "waitingStart",
+    to: "waitingInit",
   },
 
   //////////////////////////////////

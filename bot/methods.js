@@ -3,6 +3,13 @@ function setExtractedBillChoices(choices) {
   console.log("choices", choices);
   extractedBillChoices = choices;
 }
+
+let extractedOwnerChoices = [];
+function setExtractedOwnerChoices(choices) {
+  console.log("choices owner", choices);
+  extractedOwnerChoices = choices;
+}
+
 function hideKeyboard() {
   return {
     reply_markup: {
@@ -52,9 +59,31 @@ function getReceiptAmountChoices() {
   return [text, opts];
 }
 
+function getInit() {
+  const text =
+    "Welcome to Split Bills! \n/join --> anyone who wish to join the billing tab please use command /join before /ready \n/ready --> use this command when everyone has /join the tab and ready to split the bills";
+  const opts = hideKeyboard();
+  return [text, opts];
+}
+
+function getReceiptOwnerChoices() {
+  const text = "Who paid for this bill";
+  console.log("extractedChoces", extractedOwnerChoices);
+  const opts = setKeyboard(extractedOwnerChoices);
+  return [text, opts];
+}
+
 // elements that interract with user to make the transition happen
 // e.g waiting for text or button selection from user
 const methods = {
+  onGotInit: function () {
+    return getInit();
+  },
+  onGotJoin: function () {
+    const text = "New member added.\n";
+    const opts = hideKeyboard();
+    return [text, opts];
+  },
   onGotStart: function () {
     console.log("enter ongotstart");
     return getMainContent("Lets begin!");
@@ -73,8 +102,14 @@ const methods = {
   onGotPrintedPrice: function () {
     return getReceiptAmountChoices();
   },
+  onGotSelectReceiptOwner: function () {
+    return getReceiptOwnerChoices();
+    // const text = "Test";
+    // const opts = hideKeyboard();
+    // return [text, opts];
+  },
   onGotSelectedPrice: function () {
-    const text = "Selected price is ----> ";
+    const text = "Uploaded bill is ____";
     const opts = setKeyboard(["Confirm", "Select another amount"]);
     return [text, opts];
   },
@@ -89,6 +124,15 @@ const methods = {
   },
   onGotErrorReceiptInput: function () {
     return getReceiptAmountChoices();
+  },
+  onGotErrorSelectReceiptOwnerInput: function () {
+    console.log("enter owner choice error");
+    const text = "Please select the correct member";
+    const opts = hideKeyboard();
+    return [text, opts];
+  },
+  onGotErrorSelectReceiptOwnerToSelectReceiptOwner: function () {
+    return getReceiptOwnerChoices();
   },
   onGotAddMoreReceipt: function () {
     return getReceiptOrInputManually("Add More is selected ");
@@ -108,11 +152,13 @@ const methods = {
     return getGoingMainContent();
   },
   onGotBackToMain: function () {
-    return getMainContent("You are back to main!");
+    return getInit();
+    // return getMainContent("You are back to main!");
   },
   onGotMainFromShowWebApp: function () {
     console.log("enter gotmainfromshowwebapp");
-    return getMainContent("You are back to main!");
+    return getInit();
+    // return getMainContent("You are back to main!");
   },
   ///// Input amount ///////
   onGotInputAmountCmd: function () {
@@ -170,8 +216,9 @@ const methods = {
     return getGoingMainContent();
   },
   onGotBackToMainForHistory: function () {
-    return getMainContent("You are back to main!");
+    return getInit();
+    // return getMainContent("You are back to main!");
   },
 };
 
-export { methods, setExtractedBillChoices };
+export { methods, setExtractedBillChoices, setExtractedOwnerChoices };
