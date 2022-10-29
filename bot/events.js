@@ -88,9 +88,16 @@ export function getEventFromStateAndMessage(state, text) {
       if (text === "wrong type") {
         return "gotInputAmountError"; // error when data type is wrong
       } else {
+        return "gotSelectInputAmountOwner";
+      }
+    case "waitingSelectInputAmountOwner":
+      if (text === "wrong input") {
+        return "gotErrorSelectAmountOwnerInput";
+      } else {
         return "gotInputAmount";
       }
-
+    case "waitingErrorSelectAmountOwnerInput":
+      return "gotErrorSelectAmountInputOwnerToSelectAmountInputOwner";
     case "waitingInputAmount":
       if (text === "Confirm") {
         return "gotInputConfirmCmd";
@@ -172,6 +179,12 @@ export function makeTransition(fsm, transition) {
       return fsm.gotInputAmountCmd();
     case "gotInputAmount":
       return fsm.gotInputAmount();
+    case "gotSelectInputAmountOwner":
+      return fsm.gotSelectInputAmountOwner();
+    case "gotErrorSelectAmountOwnerInput":
+      return fsm.gotErrorSelectAmountOwnerInput();
+    case "gotErrorSelectAmountInputOwnerToSelectAmountInputOwner":
+      return fsm.gotErrorSelectAmountInputOwnerToSelectAmountInputOwner();
     case "gotInputAmountError":
       return fsm.gotInputAmountError();
     case "gotInputAmountErrorToCmd":

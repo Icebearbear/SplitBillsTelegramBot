@@ -27,6 +27,7 @@ function jumpToNextState(th, stateBefore, message, fsm) {
     "waitingCalculateBillsFrInputAmount",
     "waitingInputAmountError",
     "waitingErrorSelectReceiptOwnerInput",
+    "waitingErrorSelectAmountOwnerInput",
   ];
   if (statesList.indexOf(stateBefore) != -1) {
     th.respondTo(message, fsm);
@@ -71,7 +72,10 @@ async function changeTextIfWrongTypeAndAddToList(th, stateBefore, message) {
     }
     return text;
   }
-  if (stateBefore === "waitingSelectReceiptOwner") {
+  if (
+    stateBefore === "waitingSelectReceiptOwner" ||
+    stateBefore === "waitingSelectInputAmountOwner"
+  ) {
     console.log("check waitingSelectReceiptOwner input", text);
     th.setInputOwner(text);
     if (th.getInputOwner() === null) {
@@ -91,7 +95,11 @@ async function saveBillsAndSummaryToDb(th, message, context) {
   // console.log("nO OF MEMBERS BILL ID :" + th.getMembersCount() + billId);
 
   console.log("lists ", th.getBillList());
-  const summary = createSummary(th.getBillList(), th.getMembersCount(), th.getInputOwner());
+  const summary = createSummary(
+    th.getBillList(),
+    th.getMembersCount(),
+    th.getInputOwner()
+  );
   context.addText(summary);
   await th.db.saveSummary({
     summary: summary,
@@ -160,9 +168,9 @@ function calculateSplitbills(billList, noMembers) {
   return (total / noMembers).toFixed(2);
 }
 
-function createSummary(billList, noMembers) {
+function createSummary(billList, noMembers, owner) {
   const splitAmount = calculateSplitbills(billList, noMembers);
-  const summaryText = `Everyone pays ${splitAmount} to ${this.}`;
+  const summaryText = `Everyone pays ${splitAmount} to ${owner.username}`;
   return summaryText;
 }
 

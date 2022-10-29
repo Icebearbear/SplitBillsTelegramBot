@@ -134,10 +134,27 @@ const transitions = [
     to: "waitingInputAmountCmd",
   },
   {
-    name: "gotInputAmount",
+    name: "gotSelectInputAmountOwner",
     from: "waitingInputAmountCmd",
+    to: "waitingSelectInputAmountOwner",
+  },
+  {
+    name: "gotInputAmount",
+    from: "waitingSelectInputAmountOwner",
     to: "waitingInputAmount",
   },
+  // input owner choice error ////
+  {
+    name: "gotErrorSelectAmountOwnerInput",
+    from: "waitingSelectInputAmountOwner",
+    to: "waitingErrorSelectAmountOwnerInput",
+  },
+  {
+    name: "gotErrorSelectAmountInputOwnerToSelectAmountInputOwner",
+    from: "waitingErrorSelectAmountOwnerInput",
+    to: "waitingSelectInputAmountOwner",
+  },
+  //////////////////////////
 
   // data type error ////
   {

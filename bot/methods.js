@@ -109,7 +109,7 @@ const methods = {
     // return [text, opts];
   },
   onGotSelectedPrice: function () {
-    const text = "Uploaded bill is ____";
+    const text = "This is the uploaded bill : \n";
     const opts = setKeyboard(["Confirm", "Select another amount"]);
     return [text, opts];
   },
@@ -166,6 +166,17 @@ const methods = {
       "Input amount is selected. Please input the bill amount manually";
     const opts = hideKeyboard();
     return [text, opts];
+  },
+  onGotSelectInputAmountOwner: function () {
+    return getReceiptOwnerChoices();
+  },
+  onGotErrorSelectAmountOwnerInput: function () {
+    const text = "Select the correct member";
+    const opts = hideKeyboard();
+    return [text, opts];
+  },
+  onGotErrorSelectAmountInputOwnerToSelectAmountInputOwner: function () {
+    return getReceiptOwnerChoices();
   },
   onGotInputAmount: function () {
     const text = "Press confirm to proceed. Received the amount of ";
